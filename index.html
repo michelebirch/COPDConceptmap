@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>COPD Exacerbation Concept Map</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    background: #0f1923;
+    color: #e0e8f0;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    background: linear-gradient(135deg, #1a3a5c, #0d2137);
+    padding: 10px 20px;
+    border-bottom: 2px solid #2a6496;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  header h1 { font-size: 15px; color: #7ec8e3; font-weight: 700; letter-spacing: 0.5px; }
+  .score-area { display: flex; gap: 12px; align-items: center; }
+  .score { font-size: 13px; color: #aad4e8; }
+  .score span { color: #7ec8e3; font-weight: bold; font-size: 16px; }
+  button.reset-btn {
+    background: #2a6496; color: white; border: none; padding: 5px 14px;
+    border-radius: 20px; cursor: pointer; font-size: 12px;
+  }
+  button.check-btn {
+    background: #1a7a4a; color: white; border: none; padding: 5px 14px;
+    border-radius: 20px; cursor: pointer; font-size: 12px;
+  }
+
+  .main { display: flex; flex: 1; overflow: hidden; }
+
+  .left-panel {
+    width: 190px;
+    flex-shrink: 0;
+    background: #101e2b;
+    border-right: 2px solid #1e3a52;
+    padding: 10px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    overflow-y: auto;
+  }
+  .panel-title {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #5a8aaa;
+    font-weight: 700;
+    margin-bottom: 4px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #1e3a52;
+  }
+  .section-label {
+    font-size: 10px;
+    color: #4a7a9a;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 4px;
+    font-weight: 600;
+  }
+
+  .drag-item {
+    padding: 7px 10px;
+    border-radius: 8px;
+    cursor: grab;
+    font-size: 11px;
+    font-weight: 600;
+    border: 1.5px solid transparent;
+    transition: transform 0.15s, box-shadow 0.15s;
+    user-select: none;
+    text-align: center;
+  }
+  .drag-item:hover { transform: scale(1.04); box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+  .drag-item.used { opacity: 0.25; pointer-events: none; }
+
+  .cat-inflammation    { background: #3d1a1a; border-color: #c0392b; color: #e87070; }
+  .cat-immunology      { background: #1a2d3d; border-color: #2980b9; color: #5dade2; }
+  .cat-microbiology    { background: #1a3020; border-color: #27ae60; color: #58d68d; }
+  .cat-pathology       { background: #2d1a3d; border-color: #8e44ad; color: #bb8fce; }
+  .cat-physiology      { background: #3d2d1a; border-color: #e67e22; color: #f0a050; }
+  .cat-pharmacology    { background: #1a3d3a; border-color: #16a085; color: #45b39d; }
+  .cat-symptom         { background: #2d2d1a; border-color: #f1c40f; color: #f4d03f; }
+
+  .right-panel {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background: #0d1b27;
+  }
+
+  svg#map-svg {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+  }
+
+  .node {
+    position: absolute;
+    border-radius: 10px;
+    border: 2px solid #2a4a6a;
+    padding: 8px 10px;
+    font-size: 11px;
+    text-align: center;
+    min-width: 105px;
+    max-width: 135px;
+    background: #12263a;
+    color: #9ab8d0;
+    line-height: 1.3;
+  }
+  .node .node-title { font-weight: 700; font-size: 10px; color: #5a8aaa; margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .node .node-label { font-size: 9.5px; color: #7aaccc; }
+
+  .drop-zone {
+    min-height: 26px;
+    border: 1.5px dashed #2a5a7a;
+    border-radius: 6px;
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: #3a6a8a;
+    padding: 2px 4px;
+    cursor: default;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .drop-zone.drag-over {
+    border-color: #5ab4e8;
+    background: rgba(90,180,232,0.1);
+    color: #5ab4e8;
+  }
+  .drop-zone.filled { border-style: solid; font-weight: 700; }
+  .drop-zone.correct { border-color: #27ae60 !important; background: rgba(39,174,96,0.15); color: #58d68d !important; }
+  .drop-zone.incorrect { border-color: #e74c3c !important; background: rgba(231,76,60,0.15); color: #e87070 !important; }
+
+  .node-copd {
+    background: linear-gradient(135deg, #1a3a5c, #0d2137);
+    border: 2.5px solid #2a6496;
+    color: #7ec8e3;
+    font-weight: 700;
+    font-size: 12px;
+    border-radius: 50%;
+    width: 90px;
+    height: 90px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    line-height: 1.2;
+    padding: 0;
+    min-width: unset;
+    max-width: unset;
+  }
+
+  .legend {
+    position: absolute;
+    bottom: 8px;
+    right: 10px;
+    font-size: 9px;
+    color: #3a6a8a;
+    text-align: right;
+  }
+
+  .result-banner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(10,20,35,0.97);
+    border: 2px solid #2a6496;
+    border-radius: 14px;
+    padding: 24px 36px;
+    text-align: center;
+    z-index: 100;
+    display: none;
+  }
+  .result-banner h2 { color: #7ec8e3; margin-bottom: 8px; }
+  .result-banner p { color: #aad4e8; margin-bottom: 16px; font-size: 13px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🫁 COPD Exacerbation — Pathophysiology Concept Map</h1>
+  <div class="score-area">
+    <div class="score">Placed: <span id="placed-count">0</span>/12</div>
+    <button class="check-btn" onclick="checkAnswers()">Check Answers</button>
+    <button class="reset-btn" onclick="resetAll()">Reset</button>
+  </div>
+</header>
+
+<div class="main">
+  <div class="left-panel" id="left-panel">
+    <div class="panel-title">Drag Items to Map</div>
+
+    <div class="section-label">Categories</div>
+    <div class="drag-item cat-inflammation" draggable="true" data-id="inflammation">🔥 Inflammation</div>
+    <div class="drag-item cat-immunology" draggable="true" data-id="immunology">🛡️ Immunology</div>
+    <div class="drag-item cat-microbiology" draggable="true" data-id="microbiology">🦠 Microbiology</div>
+    <div class="drag-item cat-pathology" draggable="true" data-id="pathology">🔬 Pathology</div>
+    <div class="drag-item cat-physiology" draggable="true" data-id="physiology">💨 Physiology</div>
+    <div class="drag-item cat-pharmacology" draggable="true" data-id="pharmacology">💊 Pharmacology</div>
+
+    <div class="section-label" style="margin-top:8px;">Symptoms</div>
+    <div class="drag-item cat-symptom" draggable="true" data-id="cough">🤧 Cough</div>
+    <div class="drag-item cat-symptom" draggable="true" data-id="sob">😮‍💨 Shortness of Breath</div>
+    <div class="drag-item cat-symptom" draggable="true" data-id="wheeze">〰️ Wheezing</div>
+    <div class="drag-item cat-symptom" draggable="true" data-id="airflow">🌬️ Decreased Air Movement</div>
+  </div>
+
+  <div class="right-panel" id="map-area">
+    <svg id="map-svg"></svg>
+
+    <!-- CENTER -->
+    <div class="node node-copd" id="node-center" style="left:calc(50% - 45px); top:calc(50% - 45px);">
+      COPD<br>Exacerbation
+    </div>
+
+    <!-- TRIGGER (top center) -->
+    <div class="node" id="node-trigger" style="left:calc(50% - 65px); top:4%;">
+      <div class="node-title">Trigger</div>
+      <div class="node-label">Bacteria/Virus/Irritant</div>
+      <div class="drop-zone" id="dz-trigger-cat" data-answer="microbiology">Drop category</div>
+    </div>
+
+    <!-- IMMUNE (top right) -->
+    <div class="node" id="node-immune" style="right:3%; top:8%;">
+      <div class="node-title">Immune Response</div>
+      <div class="node-label">Neutrophil & macrophage recruitment, cytokine release</div>
+      <div class="drop-zone" id="dz-immune-cat" data-answer="immunology">Drop category</div>
+    </div>
+
+    <!-- MUCOSAL DAMAGE (top left) -->
+    <div class="node" id="node-path" style="left:3%; top:8%;">
+      <div class="node-title">Mucosal Damage</div>
+      <div class="node-label">Epithelial injury, cilia dysfunction, goblet cell hyperplasia</div>
+      <div class="drop-zone" id="dz-path-cat" data-answer="pathology">Drop category</div>
+    </div>
+
+    <!-- INFLAMMATION (right) -->
+    <div class="node" id="node-inflam" style="right:2%; top:42%;">
+      <div class="node-title">Airway Inflammation</div>
+      <div class="node-label">Edema, mucus hypersecretion, smooth muscle contraction</div>
+      <div class="drop-zone" id="dz-inflam-cat" data-answer="inflammation">Drop category</div>
+    </div>
+
+    <!-- AIRFLOW OBSTRUCTION (bottom center) -->
+    <div class="node" id="node-airflow" style="left:calc(50% - 65px); bottom:4%;">
+      <div class="node-title">Airflow Obstruction</div>
+      <div class="node-label">↑ Resistance, air trapping, hyperinflation, V/Q mismatch</div>
+      <div class="drop-zone" id="dz-airflow-cat" data-answer="physiology">Drop category</div>
+    </div>
+
+    <!-- TREATMENT (bottom right) -->
+    <div class="node" id="node-tx" style="right:3%; bottom:8%;">
+      <div class="node-title">Treatment</div>
+      <div class="node-label">Bronchodilators, corticosteroids, antibiotics, supplemental O₂</div>
+      <div class="drop-zone" id="dz-tx-cat" data-answer="pharmacology">Drop category</div>
+    </div>
+
+    <!-- SYMPTOMS (left) -->
+    <div class="node" id="node-sx" style="left:2%; top:38%;">
+      <div class="node-title">Symptoms</div>
+      <div class="drop-zone" id="dz-cough" data-answer="cough">Drop symptom</div>
+      <div class="drop-zone" id="dz-sob" data-answer="sob">Drop symptom</div>
+      <div class="drop-zone" id="dz-wheeze" data-answer="wheeze">Drop symptom</div>
+      <div class="drop-zone" id="dz-airflow-sx" data-answer="airflow">Drop symptom</div>
+    </div>
+
+    <div class="legend">Drag items from the left panel into dashed drop zones</div>
+
+    <div class="result-banner" id="result-banner">
+      <h2 id="result-title">Results</h2>
+      <p id="result-msg"></p>
+      <button class="reset-btn" style="font-size:13px; padding:8px 24px;" onclick="resetAll()">Try Again</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const answers = {
+  'dz-trigger-cat': 'microbiology',
+  'dz-immune-cat':  'immunology',
+  'dz-path-cat':    'pathology',
+  'dz-inflam-cat':  'inflammation',
+  'dz-airflow-cat': 'physiology',
+  'dz-tx-cat':      'pharmacology',
+  'dz-cough':       'cough',
+  'dz-sob':         'sob',
+  'dz-wheeze':      'wheeze',
+  'dz-airflow-sx':  'airflow',
+};
+
+const TOTAL = Object.keys(answers).length;
+
+const labelMap = {
+  inflammation: '🔥 Inflammation',
+  immunology:   '🛡️ Immunology',
+  microbiology: '🦠 Microbiology',
+  pathology:    '🔬 Pathology',
+  physiology:   '💨 Physiology',
+  pharmacology: '💊 Pharmacology',
+  cough:        '🤧 Cough',
+  sob:          '😮‍💨 Shortness of Breath',
+  wheeze:       '〰️ Wheezing',
+  airflow:      '🌬️ Decreased Air Movement',
+};
+
+const catClass = {
+  inflammation: 'cat-inflammation',
+  immunology:   'cat-immunology',
+  microbiology: 'cat-microbiology',
+  pathology:    'cat-pathology',
+  physiology:   'cat-physiology',
+  pharmacology: 'cat-pharmacology',
+  cough:        'cat-symptom',
+  sob:          'cat-symptom',
+  wheeze:       'cat-symptom',
+  airflow:      'cat-symptom',
+};
+
+const symptoms = ['cough','sob','wheeze','airflow'];
+
+let draggedId = null;
+let placed = {};
+
+document.querySelectorAll('.drag-item').forEach(item => {
+  item.addEventListener('dragstart', e => {
+    draggedId = item.dataset.id;
+    e.dataTransfer.effectAllowed = 'copy';
+  });
+});
+
+document.querySelectorAll('.drop-zone').forEach(dz => {
+  dz.addEventListener('dragover', e => {
+    e.preventDefault();
+    if (!dz.classList.contains('filled')) dz.classList.add('drag-over');
+  });
+  dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault();
+    dz.classList.remove('drag-over');
+    if (dz.classList.contains('filled') || !draggedId) return;
+
+    if (symptoms.includes(draggedId)) {
+      for (let v of Object.values(placed)) {
+        if (v === draggedId) {
+          alert('This symptom is already placed on the map!');
+          return;
+        }
+      }
+    }
+
+    placed[dz.id] = draggedId;
+    dz.classList.add('filled');
+    dz.textContent = labelMap[draggedId];
+    dz.classList.add(catClass[draggedId]);
+
+    if (symptoms.includes(draggedId)) {
+      document.querySelector(`.drag-item[data-id="${draggedId}"]`).classList.add('used');
+    }
+
+    document.getElementById('placed-count').textContent = Object.keys(placed).length;
+    draggedId = null;
+  });
+});
+
+function checkAnswers() {
+  let correct = 0;
+  const filled = Object.keys(placed).length;
+  document.querySelectorAll('.drop-zone').forEach(dz => {
+    if (!placed[dz.id]) return;
+    if (placed[dz.id] === answers[dz.id]) {
+      dz.classList.add('correct'); dz.classList.remove('incorrect'); correct++;
+    } else {
+      dz.classList.add('incorrect'); dz.classList.remove('correct');
+    }
+  });
+  const banner = document.getElementById('result-banner');
+  const title  = document.getElementById('result-title');
+  const msg    = document.getElementById('result-msg');
+  if (filled < TOTAL) {
+    title.textContent = '⚠️ Incomplete';
+    msg.textContent = `${filled}/${TOTAL} filled. ${correct} correct so far. Fill all zones to complete!`;
+  } else {
+    const pct = Math.round(correct/TOTAL*100);
+    if (pct === 100) { title.textContent = '🎉 Perfect!'; msg.textContent = `All ${TOTAL}/${TOTAL} correct! Excellent COPD pathophysiology knowledge.`; }
+    else if (pct >= 70) { title.textContent = '✅ Good Job!'; msg.textContent = `${correct}/${TOTAL} correct (${pct}%). Review red zones and try again.`; }
+    else { title.textContent = '📖 Keep Studying'; msg.textContent = `${correct}/${TOTAL} correct (${pct}%). Review the pathophysiology pathway and retry.`; }
+  }
+  banner.style.display = 'block';
+}
+
+function resetAll() {
+  placed = {};
+  document.getElementById('placed-count').textContent = '0';
+  document.querySelectorAll('.drop-zone').forEach(dz => {
+    dz.className = 'drop-zone';
+    dz.textContent = dz.dataset.answer && ['cough','sob','wheeze','airflow'].includes(dz.dataset.answer) ? 'Drop symptom' : 'Drop category';
+  });
+  document.querySelectorAll('.drag-item').forEach(i => i.classList.remove('used'));
+  document.getElementById('result-banner').style.display = 'none';
+}
+
+// Draw SVG arrows
+function drawArrows() {
+  const svg = document.getElementById('map-svg');
+  svg.innerHTML = '';
+  const area = document.getElementById('map-area');
+  const aRect = area.getBoundingClientRect();
+
+  const defs = document.createElementNS('http://www.w3.org/2000/svg','defs');
+  const marker = document.createElementNS('http://www.w3.org/2000/svg','marker');
+  marker.setAttribute('id','arr'); marker.setAttribute('markerWidth','8'); marker.setAttribute('markerHeight','8');
+  marker.setAttribute('refX','6'); marker.setAttribute('refY','3'); marker.setAttribute('orient','auto');
+  const mp = document.createElementNS('http://www.w3.org/2000/svg','path');
+  mp.setAttribute('d','M0,0 L0,6 L8,3 z'); mp.setAttribute('fill','#2a5a7a');
+  marker.appendChild(mp); defs.appendChild(marker); svg.appendChild(defs);
+
+  const pairs = [
+    ['node-trigger','node-immune'],
+    ['node-trigger','node-path'],
+    ['node-immune','node-inflam'],
+    ['node-path','node-inflam'],
+    ['node-inflam','node-airflow'],
+    ['node-airflow','node-sx'],
+    ['node-airflow','node-tx'],
+    ['node-center','node-trigger'],
+    ['node-center','node-inflam'],
+    ['node-sx','node-tx'],
+  ];
+
+  pairs.forEach(([a,b]) => {
+    const eA = document.getElementById(a);
+    const eB = document.getElementById(b);
+    if (!eA || !eB) return;
+    const rA = eA.getBoundingClientRect();
+    const rB = eB.getBoundingClientRect();
+    const x1 = rA.left - aRect.left + rA.width/2;
+    const y1 = rA.top  - aRect.top  + rA.height/2;
+    const x2 = rB.left - aRect.left + rB.width/2;
+    const y2 = rB.top  - aRect.top  + rB.height/2;
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1',x1); line.setAttribute('y1',y1);
+    line.setAttribute('x2',x2); line.setAttribute('y2',y2);
+    line.setAttribute('stroke','#1e4a6a'); line.setAttribute('stroke-width','1.5');
+    line.setAttribute('marker-end','url(#arr)');
+    svg.appendChild(line);
+  });
+}
+
+window.addEventListener('load', () => setTimeout(drawArrows, 150));
+window.addEventListener('resize', drawArrows);
+</script>
+</body>
+</html>
